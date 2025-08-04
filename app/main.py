@@ -83,6 +83,7 @@ def main(download, check, target, list, generate, debug, reset, version):
         echo("info", "resetting, removing caches and logs ...")
         tic = time.time()
 
+        Path("./run").mkdir(exist_ok=True)
         for target in config.targets:
             folder = Path(f"./run/{target['hostname']}")
             if folder.exists():

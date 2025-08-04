@@ -1,0 +1,17 @@
+# ################################################################################
+# for-development-only
+#
+# coverage
+# pip-review
+# pyinstaller
+# pytest
+# pytest-cov
+# ruff
+
+
+# ################################################################################
+# prerequisite, required-to-work.
+
+click
+pyyaml
+sqlalchemy
