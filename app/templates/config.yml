@@ -1,0 +1,45 @@
+# ################################################################################
+# logging
+
+logging:
+  level: "info"
+  retention: 7
+
+# ################################################################################
+# settings
+
+settings:
+  excludes:
+    - "^(__pycache__|files|icon|stats)$" # ignore files in these folders
+    - ".(git|log|old)$" # ignore files / folders having these extensions
+    - ".(flake8|gitignore)$" # ignore hidden files
+
+# ################################################################################
+# projects
+
+projects:
+  - name: "project #1"
+    path: "/projects/project_1/"
+
+  - name: "project #2"
+    path: "/projects/project_2/"
+
+# ################################################################################
+# targets
+
+targets:
+  - hostname: "host1.example.com"
+    port: 22
+    username: "username"
+    password: "password"
+    projects:
+      - name: "project #1"
+        path: "/data/projects/project_1"
+
+  - hostname: "host2.example.com"
+    port: 22
+    username: "username"
+    password: "password"
+    projects:
+      - name: "project #2"
+        path: "/data/projects/project_2"
