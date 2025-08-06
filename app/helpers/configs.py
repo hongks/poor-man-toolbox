@@ -22,7 +22,7 @@ class Config(Base):
             self.retention = 7
 
             self.filename = "./run/poor-man-filesync.log"
-            self.format = "%(asctime)s | %(levelname)s in %(module)s: %(message)s"
+            self.format = "%(asctime)s | %(levelname)-7s | %(module)s: %(message)s"
 
     class SQLite(Base):
         def __init__(self):

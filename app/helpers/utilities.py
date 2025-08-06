@@ -37,7 +37,7 @@ def compare_the_path(excludes, path, uri):
 
 def echo(level, message):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-    click.echo(f"{timestamp} | {level.upper()} in main: {message}")
+    click.echo(f"{timestamp} | {level.upper():7} | main: {message}")
 
 
 def setup_logging(config, sqlite):
@@ -76,7 +76,7 @@ def walk_the_path(excludes, sftp, local_path, remote_path, counts=0):
             continue
 
         local_file = local_path / item.filename
-        remote_file = f"{remote_path.rstrip("/")}/{item.filename}"
+        remote_file = f"{remote_path.rstrip('/')}/{item.filename}"
 
         if item.longname.startswith("d"):  # directory
             counts = walk_the_path(

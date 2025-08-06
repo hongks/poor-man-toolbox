@@ -77,7 +77,7 @@ def main(download, check, target, list, generate, debug, reset, version):
         return
 
     sqlite = SQLite(config)
-    config.sync(sqlite.session)
+    config.sync(sqlite.Session())
 
     if reset:
         echo("info", "resetting, removing caches and logs ...")
@@ -180,6 +180,10 @@ def main(download, check, target, list, generate, debug, reset, version):
                             logging.info(
                                 f"... {counts} files copied in {time.time() - tic:.3f}s!"
                             )
+
+            except paramiko.AuthenticationException as err:
+                logging.error(f"target selected: {target}, authentication failed!")
+                return
 
             except Exception as err:
                 logging.exception(f"unexpected {err=}, {type(err)=}")
