@@ -1,75 +1,93 @@
 import hashlib
 
 from datetime import datetime, timezone
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
+from typing import TypeVar
 
 import yaml
 
 from .sqlite import Setting
 
-
-# base class
-class Base:
-    def __str__(self):
-        return str(self.__dict__)
+T = TypeVar("T")
 
 
-# default configs, overide as needed
-class Config(Base):
-    class Logging(Base):
-        def __init__(self):
-            self.level = "INFO"
-            self.retention = 7
+# default configs, override as needed
+@dataclass
+class Config:
+    @dataclass
+    class Logging:
+        level: str = "INFO"
+        retention: int = 7
 
-            self.filename = "./run/poor-man-filesync.log"
-            self.format = "%(asctime)s | %(levelname)-7s | %(module)s: %(message)s"
+        filename: str = "./run/poor-man-filesync.log"
+        format: str = "%(asctime)s | %(levelname)-7s | %(module)s: %(message)s"
 
-    class SQLite(Base):
-        def __init__(self):
-            self.echo = False
-            self.track_modifications = False
-            self.uri = "sqlite:///./run/cache.sqlite"
+        def __post_init__(self):
+            self.level = str(self.level).upper()
 
-    def __init__(self):
-        self.filename = "./run/config.yml"
-        self.filepath = Path(".").resolve()
-        self.secret_key = "the-quick-brown-fox-jumps-over-the-lazy-dog!"
-        self.template = "./app/templates/config.yml"
-        self.version = "0.3.0"
+    @dataclass
+    class SQLite:
+        echo: bool = False
+        track_modifications: bool = False
+        uri: str = "sqlite:///./run/cache.sqlite"
 
-        self.logging = self.Logging()
-        self.sqlite = self.SQLite()
+    @dataclass
+    class Project:
+        name: str
+        path: str
 
-        # miscellaneous
-        self.excludes = ["__pycache__", r"\.(git|log|flake8|gitignore)$"]
-        self.projects = None
-        self.targets = None
+    @dataclass
+    class Target:
+        hostname: str
+        port: int
+        username: str
+        password: str
+        projects: list["Config.Project"] = field(default_factory=list)
+
+    filename: str = "./run/config.yml"
+    filepath: Path = Path(".").resolve()
+    secret_key: str = "the-quick-brown-fox-jumps-over-the-lazy-dog!"
+    template: str = "./app/templates/config.yml"
+    version: str = "0.3.0"
+
+    logging: Logging = field(default_factory=Logging)
+    sqlite: SQLite = field(default_factory=SQLite)
+
+    # miscellaneous
+    excludes = ["__pycache__", r"\.(git|log|flake8|gitignore)$"]
+    projects = None
+    targets = None
 
     # override default configs
-    def load(self):
-        file = Path(self.filename)
-
-        if not file.exists():
-            print(f"config file {self.filename} not found, using defaults.")
-            return None
-
+    def load(self) -> str | None:
         sha256 = hashlib.sha256()
-        with file.open("rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                sha256.update(chunk)
 
         try:
+            file = Path(self.filename)
+            with file.open("rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    sha256.update(chunk)
+
             with file.open("r") as f:
-                configs = yaml.safe_load(f)
+                configs = yaml.safe_load(f) or {}
 
-                # logging
-                self.logging.level = configs["logging"]["level"].upper()
-                self.logging.retention = int(configs["logging"]["retention"])
+            dataclass_map = {
+                "logging": self.logging,
+            }
 
-                # miscellaneous
-                self.excludes = configs["settings"]["excludes"]
-                self.projects = configs["projects"]
-                self.targets = configs["targets"]
+            for key, cls in dataclass_map.items():
+                cfg = configs.get(key, {})
+                setattr(self, key, self.parse(cls, cfg))
+
+            # miscellaneous
+            self.excludes = configs.get("excludes", self.excludes)
+            self.projects = configs.get("projects", self.projects)
+            self.targets = configs.get("targets", self.targets)
+
+        except FileNotFoundError:
+            print(f"config file {self.filename} not found, using defaults.")
+            return None
 
         except yaml.YAMLError as err:
             print(f"error parsing yml file: {err}")
@@ -81,24 +99,32 @@ class Config(Base):
 
         return sha256.hexdigest()
 
+    # helpers
+    def parse(self, instance: T, cfg: dict) -> T:
+        updates = {
+            f.name: cfg[f.name]
+            for f in fields(instance)
+            if f.name in cfg and cfg[f.name] is not None
+        }
+        return replace(instance, **updates)
+
     # in case config file is different
-    def sync(self, session):
+    def sync(self, session) -> datetime | None:
         sha256 = self.load()
         if not sha256:
             return None
 
         row = session.query(Setting).filter_by(key="config-sha256").first()
-        dt = datetime.now(tz=timezone.utc)
-
         if row and sha256 == row.value:
             return None  # no changes detected
 
+        now = datetime.now(tz=timezone.utc)
         if not row:
-            row = Setting(key="config-sha256", created_on=dt)
+            row = Setting(key="config-sha256", created_on=now)
             session.add(row)
 
         row.value = sha256
-        row.updated_on = dt
+        row.updated_on = now
 
         session.commit()
-        return dt
+        return now

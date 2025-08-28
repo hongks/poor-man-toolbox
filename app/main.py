@@ -181,7 +181,7 @@ def main(download, check, target, list, generate, debug, reset, version):
                                 f"... {counts} files copied in {time.time() - tic:.3f}s!"
                             )
 
-            except paramiko.AuthenticationException as err:
+            except paramiko.AuthenticationException:
                 logging.error(f"target selected: {target}, authentication failed!")
                 return
 
