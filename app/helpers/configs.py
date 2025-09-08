@@ -1,9 +1,9 @@
 import hashlib
 
-from datetime import datetime, timezone
 from dataclasses import dataclass, field, fields, replace
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import yaml
 
@@ -21,7 +21,7 @@ class Config:
         retention: int = 7
 
         filename: str = "./run/poor-man-filesync.log"
-        format: str = "%(asctime)s | %(levelname)-7s | %(module)s: %(message)s"
+        format: str = "%(asctime)s  %(levelname)-7s  %(module)-8s  %(message)s"
 
         def __post_init__(self):
             self.level = str(self.level).upper()
@@ -62,15 +62,12 @@ class Config:
     # override default configs
     def load(self) -> str | None:
         sha256 = hashlib.sha256()
+        file = Path(self.filename)
 
         try:
-            file = Path(self.filename)
-            with file.open("rb") as f:
-                for chunk in iter(lambda: f.read(4096), b""):
-                    sha256.update(chunk)
-
-            with file.open("r") as f:
-                configs = yaml.safe_load(f) or {}
+            data = file.read_bytes()
+            sha256.update(data)
+            configs: dict[str, Any] = yaml.safe_load(data.decode()) or {}
 
             dataclass_map = {
                 "logging": self.logging,
@@ -128,3 +125,9 @@ class Config:
 
         session.commit()
         return now
+
+
+class ConfigSelectorPolicy(DefaultEventLoopPolicy):
+    def new_event_loop(self):
+        selector = SelectSelector()
+        return SelectorEventLoop(selector)
