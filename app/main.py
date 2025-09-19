@@ -10,7 +10,7 @@ import paramiko
 
 from helpers.configs import Config
 from helpers.sqlite import SQLite
-from helpers.utilities import compare_the_path, echo, setup_logging, walk_the_path
+from helpers.utility import compare_the_path, echo, setup_logging, walk_the_path
 
 
 # ################################################################################
@@ -70,7 +70,16 @@ from helpers.utilities import compare_the_path, echo, setup_logging, walk_the_pa
     "-h",
     help="show this message and exit.",
 )
-def main(download, check, target, list, generate, debug, reset, version):
+def main(
+    download: bool,
+    check: bool,
+    target: bool,
+    list: bool,
+    generate: bool,
+    debug: bool,
+    reset: bool,
+    version: bool,
+):
     config = Config()
     if version:
         click.echo(f"version {config.version}")

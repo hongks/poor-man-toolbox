@@ -12,7 +12,15 @@ import click
 from .sqlite import SQLiteHandler
 
 
-def compare_the_path(excludes, path, uri):
+# typing annotations to avoid circular imports
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .configs import Config
+    from .sqlite import SQLite
+
+
+def compare_the_path(excludes: list[str], path: str, uri: str):
     filecmp.clear_cache()
 
     base_path = Path(path).resolve()
@@ -35,12 +43,13 @@ def compare_the_path(excludes, path, uri):
             logging.info(f"compared: {result!s:^5}, {fn}")
 
 
-def echo(level, message):
+def echo(level: str, message: str):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-    click.echo(f"{timestamp} | {level.upper():7} | main: {message}")
+    click.echo(f"{timestamp}  {level.upper():7}  main      {message}")
 
 
-def setup_logging(config, sqlite):
+def setup_logging(config: "Config", sqlite: "SQLite"):
+    # set up logging
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
 
@@ -54,11 +63,17 @@ def setup_logging(config, sqlite):
         ],
     )
 
+    # ... and silent the others
     for logger in ["httpcore", "httpx", "paramiko", "urllib3", "watchdog", "werkzeug"]:
         logging.getLogger(logger).setLevel(logging.WARNING)
 
+    # misc
+    # logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
-def walk_the_path(excludes, sftp, local_path, remote_path, counts=0):
+
+def walk_the_path(
+    excludes: list[str], sftp: str, local_path: str, remote_path: str, counts: int = 0
+):
     try:
         items = sftp.listdir_attr(remote_path)
     except FileNotFoundError:

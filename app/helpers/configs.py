@@ -1,13 +1,16 @@
 import hashlib
 
+from asyncio import DefaultEventLoopPolicy, SelectorEventLoop
 from dataclasses import dataclass, field, fields, replace
 from datetime import datetime, timezone
 from pathlib import Path
+from selectors import SelectSelector
 from typing import Any, TypeVar
 
 import yaml
 
 from .sqlite import Setting
+
 
 T = TypeVar("T")
 
