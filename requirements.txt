@@ -13,5 +13,8 @@
 # prerequisite, required-to-work.
 
 click
+docker
+humanize
+pdf2image
 pyyaml
 sqlalchemy
