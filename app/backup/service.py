@@ -15,7 +15,7 @@ from . import logger
 from .config import Config
 
 
-class FileSync:
+class Backup:
     def __init__(self, configs: Config, context: Context):
         self.configs = configs
         self.context = context
@@ -41,7 +41,7 @@ class FileSync:
                     continue
 
                 logger.info(f"comparing {host.hostname}'s {project.name} ...")
-                uri = str(Path("run") / host.hostname / project.name)
+                uri = Path("run") / host.hostname / project.name
 
                 logger.debug(f"remote: ./{uri}")
                 logger.debug(f"local: {project_path}")
@@ -117,7 +117,7 @@ class FileSync:
 
                             local_path.mkdir(parents=True, exist_ok=True)
 
-                            counts = self.walk(sftp, str(local_path), project.path)
+                            counts = self.walk(sftp, local_path, project.path)
                             logger.info(
                                 f"... {counts} files copied in {time.time() - tic:.3f}s!"
                             )
@@ -213,11 +213,11 @@ class FileSync:
             logger.error(f"remote path not found: {remote_path}")
             return counts
 
-        _local_path = Path(local_path)
-        _local_path.mkdir(parents=True, exist_ok=True)
+        local_path = Path(local_path)
+        local_path.mkdir(parents=True, exist_ok=True)
 
         for item in items:
-            local_file = str(_local_path / item.filename)
+            local_file = local_path / item.filename
             remote_file = f"{remote_path.rstrip('/')}/{item.filename}"
 
             if any(
@@ -228,14 +228,13 @@ class FileSync:
                 logger.debug(f"skipping {item.filename}")
                 continue
 
-            if item.st_mode and S_ISDIR(item.st_mode):  # directory
+            if S_ISDIR(item.st_mode):  # directory
                 counts = self.walk(sftp, local_file, remote_file, counts=counts)
 
             else:
                 try:
                     sftp.get(remote_file, str(local_file))
-                    if item.st_mtime and item.st_mtime:
-                        utime(local_file, (item.st_mtime, item.st_mtime))
+                    utime(local_file, (item.st_mtime, item.st_mtime))
 
                     counts += 1
                     logger.debug(f"copied {remote_file}")

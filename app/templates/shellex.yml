@@ -1,0 +1,10 @@
+settings:
+  silent: true
+  timeout: 60
+
+projects:
+  - name: hello
+    tasks:
+      - action: "echo hello"
+        silent: false
+        timeout: 6

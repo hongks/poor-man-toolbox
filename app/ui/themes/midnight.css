@@ -1,0 +1,35 @@
+Screen {
+    background: #000080;
+    color: #d0d0d0;
+}
+
+/* Top menu bar */
+MenuBar {
+    background: #0000aa;
+    color: #ffffff;
+    height: 1;
+}
+
+/* Dropdown menu */
+Menu {
+    background: #000080;
+    color: #ffffff;
+    border: tall #00ffff;
+}
+
+/* Menu items */
+MenuItem {
+    background: #000080;
+    color: #d0d0d0;
+}
+
+MenuItem:hover {
+    background: #00aaaa;
+    color: #000000;
+}
+
+Header,
+Footer {
+    background: #0000aa;
+    color: #ffffff;
+}

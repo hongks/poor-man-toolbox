@@ -12,9 +12,13 @@
 # ################################################################################
 # prerequisite, required-to-work.
 
+browser-cookie3
 click
 docker
 humanize
 pdf2image
 pyyaml
+selenium
 sqlalchemy
+textual
+

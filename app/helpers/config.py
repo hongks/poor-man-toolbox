@@ -87,10 +87,10 @@ class Config:
     def parse(self, instance: T, cfg: dict) -> T:
         updates = {
             f.name: cfg[f.name]
-            for f in fields(instance)
+            for f in fields(instance)  # type: ignore
             if f.name in cfg and cfg[f.name] is not None
         }
-        return replace(instance, **updates)
+        return replace(instance, **updates)  # type: ignore
 
     # in case config file is different
     def sync(self, session) -> datetime | None:

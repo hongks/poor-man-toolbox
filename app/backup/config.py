@@ -26,7 +26,6 @@ class Config:
 
     # defaults
     filename: str = "./run/filesync.yml"
-    template: str = "./app/templates/filesync.yml"
 
     excludes: list[str] = field(
         default_factory=lambda: ["__pycache__", r"\.(git|log|flake8|gitignore)$"]

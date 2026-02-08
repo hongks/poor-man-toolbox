@@ -4,56 +4,84 @@ import time
 
 from collections import deque
 from datetime import datetime, timedelta, timezone
-from typing import Any
 
-from sqlalchemy import create_engine, delete, Column, DateTime, Integer, Text
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import create_engine, delete, DateTime, Integer, Text
+from sqlalchemy.orm import (
+    declarative_base,
+    mapped_column,
+    sessionmaker,
+    Mapped,
+    Session,
+)
+from sqlalchemy.pool import StaticPool
 
 
+# ################################################################################
 # typing annotations to avoid circular imports
-from typing import TYPE_CHECKING
+
+
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .configs import Config
 
 
-Base = declarative_base()
+# ################################################################################
+# models
+
+
+Base: Any = declarative_base()
 
 
 class Log(Base):
     __tablename__ = "logs"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    module = Column(Text, index=True)
-    key = Column(Text, index=True)
-    value = Column(Text)
+    module: Mapped[str] = mapped_column(Text, index=True)
+    key: Mapped[str] = mapped_column(Text, index=True)
+    value: Mapped[str] = mapped_column(Text)
 
-    created_on = Column(DateTime, default=datetime.now(tz=timezone.utc))
-    updated_on = Column(
-        DateTime,
-        default=datetime.now(tz=timezone.utc),
-        onupdate=datetime.now(tz=timezone.utc),
+    created_on: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(tz=timezone.utc),
+    )
+    updated_on: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(tz=timezone.utc),
+        onupdate=lambda: datetime.now(tz=timezone.utc),
     )
 
 
 class Setting(Base):
     __tablename__ = "settings"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
-    key = Column(Text, unique=True, index=True)
-    value = Column(Text)
+    key: Mapped[str] = mapped_column(Text, unique=True, index=True)
+    value: Mapped[str] = mapped_column(Text)
 
-    created_on = Column(DateTime, default=datetime.now(tz=timezone.utc))
-    updated_on = Column(
-        DateTime,
-        default=datetime.now(tz=timezone.utc),
-        onupdate=datetime.now(tz=timezone.utc),
+    created_on: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(tz=timezone.utc)
     )
+    updated_on: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(tz=timezone.utc),
+        onupdate=lambda: datetime.now(tz=timezone.utc),
+    )
+
+
+# ################################################################################
+# sqlite wrapper class
 
 
 class SQLite:
     def __init__(self, config: "Config"):
-        self.engine = create_engine(config.sqlite.uri, echo=config.sqlite.echo)
+        self.engine = create_engine(
+            config.sqlite.uri,
+            echo=config.sqlite.echo,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,  # thread safe connection sharing
+            pool_pre_ping=True,
+        )
         self.Session = sessionmaker(bind=self.engine)
         self.lock = asyncio.Lock()
 
@@ -121,7 +149,7 @@ class SQLite:
     def insert(self, data: Any):
         self.inserts.append(data)
 
-    def parse(self, session: sessionmaker, data: Any):
+    def parse(self, session: Session, data: Any):
         now = datetime.now(tz=timezone.utc)
         row = None
 
@@ -159,22 +187,31 @@ class SQLite:
     async def close(self):
         self.running = False
         await self.flush()
-        logging.debug("listener is shutting down!")
+        logging.info("listener is shutting down!")
 
     async def flush(self):
         async with self.lock:
             self.flushB()
 
     async def listen(self):
-        logging.debug("listener is up and running.")
+        logging.info("listener is up and running.")
 
         while self.running:
             await self.flush()
-            await asyncio.sleep(60)  # run every minute
+
+            # await asyncio.sleep(30)
+            try:
+                await asyncio.wait_for(asyncio.Event().wait(), timeout=30)
+            except asyncio.TimeoutError:
+                pass
+
+
+# ################################################################################
+# sqlite logging handler
 
 
 class SQLiteHandler(logging.Handler):
-    def __init__(self, sqlite):
+    def __init__(self, sqlite: SQLite):
         super().__init__()
         self.sqlite = sqlite
 
@@ -183,13 +220,13 @@ class SQLiteHandler(logging.Handler):
         self.sqlite.engine.dispose()
         super().close()
 
-    def emit(self, message: str):
-        now = datetime.fromtimestamp(message.created, timezone.utc)
+    def emit(self, record: logging.LogRecord):
+        now = datetime.fromtimestamp(record.created, timezone.utc)
         try:
             row = Log(
-                module=message.module,
-                key=message.levelname.lower(),
-                value=message.getMessage(),
+                module=record.module,
+                key=record.levelname.lower(),
+                value=record.getMessage(),
                 created_on=now,
                 updated_on=now,
             )
